@@ -9,7 +9,7 @@ import lombok.*;
 @NoArgsConstructor
 @ToString
 
-public class UserInfoDTO {
+public class UserRegistrationDTO {
     private Long id;
     @NotNull(message = "Username Shouldn't be null")
     private String username;

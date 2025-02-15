@@ -1,6 +1,7 @@
 package com.WealthManager.UserInfo.exception;
 
 import io.jsonwebtoken.ExpiredJwtException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
@@ -20,12 +21,12 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(RefreshTokenExpiredException.class)
-    public ResponseEntity<String> handleRefreshTokenExpiredException(RefreshTokenExpiredException ex) {
+    public ResponseEntity<String> handleRefreshTokenExpiredException(RefreshTokenExpiredException ex, HttpServletRequest request) {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler(Exception.class)
-    public ProblemDetail handlesSecurityException(Exception ex){
+    public ProblemDetail handlesSecurityException(Exception ex, HttpServletRequest request){
         ProblemDetail errorDetail=null;
         if(ex instanceof BadCredentialsException){
             errorDetail=ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(401), ex.getMessage());
@@ -83,7 +84,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleRefreshTokenNotFoundException(RefreshTokenNotFoundException ex) {
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setMessage(ex.getMessage());
-        errorResponse.setStatus(HttpStatus.NOT_FOUND.value());
+        errorResponse.setCode(HttpStatus.NOT_FOUND.value());
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
@@ -95,26 +96,5 @@ public class GlobalExceptionHandler {
 //        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
 //    }
 
-    public static class ErrorResponse {
-        private String message;
-        private int status;
 
-        // Getters and setters
-
-        public String getMessage() {
-            return message;
-        }
-
-        public void setMessage(String message) {
-            this.message = message;
-        }
-
-        public int getStatus() {
-            return status;
-        }
-
-        public void setStatus(int status) {
-            this.status = status;
-        }
-    }
 }

@@ -1,11 +1,8 @@
 package com.WealthManager.UserInfo.service.implimentation;
 
-import com.WealthManager.UserInfo.model.dto.UserInfoDTO;
+import com.WealthManager.UserInfo.model.dto.UserRegistrationDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 //import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,7 +18,7 @@ public class UserInfoServiceImpl implements UserInfoService {
 
     @Override
     @TrackExecutiontime
-    public UserInfoDTO createUser(UserInfoDTO userInfoDTO) {
+    public UserRegistrationDTO createUser(UserRegistrationDTO userInfoDTO) {
         if (userInfoRepo.findByusername(userInfoDTO.getUsername()).isPresent()) {
             throw new UsernameAlreadyExistsException("Username " + userInfoDTO.getUsername() + " already exists");
         }
@@ -35,21 +32,21 @@ public class UserInfoServiceImpl implements UserInfoService {
 
     @Override
     @Cacheable(value = "userinfo", key = "#id")
-    public UserInfoDTO getuserbyid(Long id) {
+    public UserRegistrationDTO getuserbyid(Long id) {
         UserInfo userInfo = userInfoRepo.findById(id).orElseThrow(() ->
                 new ResourceNotFoundException("User with that id doesn't exist: " + id));
         return userInfoMapper.userInfotouserInfoDTO(userInfo);
     }
 
     @Override
-    public List<UserInfoDTO> getallusers() {
+    public List<UserRegistrationDTO> getallusers() {
         List<UserInfo> users = userInfoRepo.findAll();
-        List<UserInfoDTO> userDTOs = users.stream().map(userInfoMapper::userInfotouserInfoDTO).collect(Collectors.toList());
+        List<UserRegistrationDTO> userDTOs = users.stream().map(userInfoMapper::userInfotouserInfoDTO).collect(Collectors.toList());
         return userDTOs;
     }
 
     @Override
-    public UserInfoDTO updateuser(UserInfoDTO userInfoDTO, Long id) {
+    public UserRegistrationDTO updateuser(UserRegistrationDTO userInfoDTO, Long id) {
         UserInfo user = userInfoRepo.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("User not found")
         );
@@ -61,7 +58,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     }
 
     @Override
-    public UserInfoDTO deleteuser(Long id) {
+    public UserRegistrationDTO deleteuser(Long id) {
         UserInfo user = userInfoRepo.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("User not found")
         );
@@ -70,7 +67,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     }
 
     @Override
-    public UserInfoDTO getUserByUsername(String username) {
+    public UserRegistrationDTO getUserByUsername(String username) {
         UserInfo user = userInfoRepo.findByusername(username).orElseThrow(
                 () -> new ResourceNotFoundException("User not found")
         );

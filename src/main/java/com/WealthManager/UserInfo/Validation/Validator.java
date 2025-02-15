@@ -1,4 +1,4 @@
-package com.WealthManager.UserInfo.Util;
+package com.WealthManager.UserInfo.Validation;
 
 
 import com.WealthManager.UserInfo.exception.InvalidFileTypeException;

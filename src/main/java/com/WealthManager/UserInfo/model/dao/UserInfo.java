@@ -1,6 +1,7 @@
 package com.WealthManager.UserInfo.model.dao;
 
 import com.WealthManager.UserInfo.model.enums.Gender;
+import com.WealthManager.UserInfo.model.enums.Role;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -36,9 +37,7 @@ public class UserInfo{
     @Indexed(unique = true)
     private Long id;
     @NotBlank
-    private String firstName;
-    @NotBlank
-    private String lastName;
+    private String name;
     @NotBlank
     private String password;
     @NotBlank
@@ -52,6 +51,8 @@ public class UserInfo{
     private Integer age;
     private String registrationToken;
     private boolean isVerified;
+    @Field(targetType = FieldType.STRING)
+    private Role role;
 
     @CreatedDate
     private Date createdAt;
