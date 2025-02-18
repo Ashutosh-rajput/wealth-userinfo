@@ -1,43 +1,39 @@
 package com.WealthManager.UserInfo.Security;
 
-
-//import com.Ashutosh.ReportGenerator.Config.CustomUserDetails;
-import com.Ashutosh.ReportGenerator.Entity.UserInfo;
-import com.Ashutosh.ReportGenerator.ExceptionHandler.ResourceNotFoundException;
-import com.Ashutosh.ReportGenerator.Repositry.UserInfoRepo;
+import com.WealthManager.UserInfo.exception.ResourceNotFoundException;
+import com.WealthManager.UserInfo.model.dao.UserInfo;
+import com.WealthManager.UserInfo.repo.UserInfoRepo;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
+@RequiredArgsConstructor
 public class CustomUserInfoDetailService implements UserDetailsService {
-    @Autowired
-    private UserInfoRepo userInfoRepo;
+
+    private final UserInfoRepo userInfoRepo;
     @Override
-//    @Cacheable(value = "userDetailsCache", key = "#username")
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserInfo userInfo= userInfoRepo.findByusername(username).orElseThrow(()->
-                new ResourceNotFoundException("User with that Username doesn't exist "+ username));
-        List<GrantedAuthority> authorities= Arrays.stream(userInfo.getRoles().split(","))
-                .map(SimpleGrantedAuthority::new)
-                .collect(Collectors.toList());
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        UserInfo userInfo = userInfoRepo.findByEmail(email);
+        if (userInfo == null) {
+            throw new UsernameNotFoundException("User not found with email: " + email);
+        }
+        GrantedAuthority authority = new SimpleGrantedAuthority(userInfo.getRole().toString());
         return new org.springframework.security.core.userdetails.User(
-                username,
+                userInfo.getEmail(),
                 userInfo.getPassword(),
-                authorities
+                Collections.singletonList(authority)
         );
-//        return new CustomUserDetails(userInfo.getUsername(), userInfo.getPassword(), authorities);
-
-
-//        new UserInfoUserDetails(userInfo);   **old method
-
     }
 }

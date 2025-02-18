@@ -1,6 +1,6 @@
 package com.WealthManager.UserInfo.model.dto;
 
-import com.softnerve.Patient_MicroService.Validation.ValidPassword;
+import com.WealthManager.UserInfo.Validation.ValidPassword;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;

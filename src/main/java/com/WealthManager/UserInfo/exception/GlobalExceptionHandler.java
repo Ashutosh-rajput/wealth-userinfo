@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.nio.file.AccessDeniedException;
 import java.security.SignatureException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,31 +50,37 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex) {
+    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex, HttpServletRequest request) {
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setMessage(ex.getMessage());
-        errorResponse.setStatus(HttpStatus.NOT_FOUND.value());
+        errorResponse.setCode(HttpStatus.NOT_FOUND.value());
+        errorResponse.setPath(request.getRequestURI());
+        errorResponse.setTimestamp(new Date().toInstant().toString());
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(UsernameAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handleUsernameAlreadyExistsException(UsernameAlreadyExistsException ex) {
+    public ResponseEntity<ErrorResponse> handleUsernameAlreadyExistsException(UsernameAlreadyExistsException ex, HttpServletRequest request) {
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setMessage(ex.getMessage());
-        errorResponse.setStatus(HttpStatus.CONFLICT.value());
+        errorResponse.setCode(HttpStatus.CONFLICT.value());
+        errorResponse.setPath(request.getRequestURI());
+        errorResponse.setTimestamp(new Date().toInstant().toString());
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(ReportAlreadyExitsorConflict.class)
-    public ResponseEntity<ErrorResponse> handleReportAlreadyExitsorConflict(ReportAlreadyExitsorConflict ex) {
+    public ResponseEntity<ErrorResponse> handleReportAlreadyExitsorConflict(ReportAlreadyExitsorConflict ex, HttpServletRequest request) {
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setMessage(ex.getMessage());
-        errorResponse.setStatus(HttpStatus.CONFLICT.value());
+        errorResponse.setCode(HttpStatus.CONFLICT.value());
+        errorResponse.setPath(request.getRequestURI());
+        errorResponse.setTimestamp(new Date().toInstant().toString());
         return new ResponseEntity<>(errorResponse, HttpStatus.CONFLICT);
     }
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Map<String,String> handleInvalidArgument(MethodArgumentNotValidException ex){
+    public Map<String,String> handleInvalidArgument(MethodArgumentNotValidException ex, HttpServletRequest request){
         Map<String,String> errorMap=new HashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(error ->{
             errorMap.put(error.getField(),error.getDefaultMessage());
@@ -81,10 +88,12 @@ public class GlobalExceptionHandler {
         return errorMap;
     }
     @ExceptionHandler(RefreshTokenNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleRefreshTokenNotFoundException(RefreshTokenNotFoundException ex) {
+    public ResponseEntity<ErrorResponse> handleRefreshTokenNotFoundException(RefreshTokenNotFoundException ex, HttpServletRequest request) {
         ErrorResponse errorResponse = new ErrorResponse();
         errorResponse.setMessage(ex.getMessage());
         errorResponse.setCode(HttpStatus.NOT_FOUND.value());
+        errorResponse.setPath(request.getRequestURI());
+        errorResponse.setTimestamp(new Date().toInstant().toString());
         return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
     }
 

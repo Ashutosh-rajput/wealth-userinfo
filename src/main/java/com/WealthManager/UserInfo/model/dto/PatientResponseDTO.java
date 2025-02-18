@@ -13,5 +13,4 @@ public class PatientResponseDTO {
     private boolean success;
     private int statusCode;
     private String message;
-    private CombinedClientData data;
 }

@@ -1,8 +1,9 @@
 package com.WealthManager.UserInfo.configuration;
 
 
-import com.Ashutosh.ReportGenerator.Security.JwtAuthFilter;
-import com.Ashutosh.ReportGenerator.Service.ServiceImpl.CustomUserInfoDetailService;
+
+import com.WealthManager.UserInfo.Security.CustomUserInfoDetailService;
+import com.WealthManager.UserInfo.Security.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -33,17 +34,12 @@ public class SecurityConfig {
     @Qualifier("handlerExceptionResolver")
     private HandlerExceptionResolver exceptionResolver;
 
+    private final String[] SWAGGER_URLS = {
+            "/swagger-resources/**", "swagger-ui/**", "/swagger-ui/index.html", "/v3/api-docs/**", "/webjars/**", "/docs"
+    };
+
     @Bean
     public UserDetailsService userDetailsService(){
-//        UserDetails admin = User.withUsername(("ashu"))
-//                .password(encoder.encode("1234"))
-//                .roles("ADMIN")
-//                .build();
-//        UserDetails user = User.withUsername(("raj"))
-//                .password(encoder.encode("123"))
-//                .roles("USER")
-//                .build();
-//        return new InMemoryUserDetailsManager(admin,user);
         return new CustomUserInfoDetailService();
     }
 
@@ -59,6 +55,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/user/welcome", "/user/create-user","/login/autologin","/login/refreshtoken").permitAll()
+                        .requestMatchers(SWAGGER_URLS).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
@@ -69,14 +66,6 @@ public class SecurityConfig {
 
         return http.build();
     }
-//        return http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(authorize -> authorize
-//                        .requestMatchers("/welcome","/newuser").permitAll()
-//                        .requestMatchers("/**").authenticated()
-//                )
-//                .sessionManagement()
-//                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-//                .and().authenticationProvider(authenticationProvider())
-//                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class).build();
 
     @Bean
     public PasswordEncoder passwordEncoder(){

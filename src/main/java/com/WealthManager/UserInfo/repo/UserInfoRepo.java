@@ -5,6 +5,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface UserInfoRepo extends MongoRepository<UserInfo,Long> {
     boolean existsByEmail(String email);
-    UserInfo findByUsername(String username);
+    UserInfo findByEmail(String email);
     UserInfo findByUsernameOrEmail(String username,String email);
 }

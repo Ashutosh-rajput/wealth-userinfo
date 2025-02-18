@@ -1,12 +1,7 @@
 package com.WealthManager.UserInfo.Security;
 
-import com.Ashutosh.ReportGenerator.Entity.RefreshToken;
-import com.Ashutosh.ReportGenerator.Entity.UserInfo;
-import com.Ashutosh.ReportGenerator.ExceptionHandler.RefreshTokenExpiredException;
-import com.Ashutosh.ReportGenerator.Repositry.RefreshTokenRepo;
-import com.Ashutosh.ReportGenerator.Repositry.UserInfoRepo;
-import com.Ashutosh.ReportGenerator.Service.ServiceInterface.RefreshTokenServiceInterface;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.WealthManager.UserInfo.repo.UserInfoRepo;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -15,11 +10,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class RefreshTokenServiceImpl implements RefreshTokenServiceInterface {
-    @Autowired
-    private RefreshTokenRepo refreshTokenRepo;
-    @Autowired
-    private UserInfoRepo userInfoRepo;
+    private final RefreshTokenRepo refreshTokenRepo;
+    private final UserInfoRepo userInfoRepo;
     @Override
     public RefreshToken createRefreshToken(String username) {
         UserInfo userInfo = userInfoRepo.findByusername(username)
