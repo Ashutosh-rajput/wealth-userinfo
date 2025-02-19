@@ -1,8 +1,8 @@
 package com.WealthManager.UserInfo.service;
 
 
-import com.WealthManager.UserInfo.model.dao.DocumentEntity;
-import com.WealthManager.UserInfo.model.dto.SuccessResponse;
+import com.WealthManager.UserInfo.data.dao.DocumentEntity;
+import com.WealthManager.UserInfo.data.dto.SuccessResponse;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;

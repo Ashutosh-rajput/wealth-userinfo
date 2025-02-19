@@ -1,10 +1,11 @@
-package com.WealthManager.UserInfo.model.dao;
+package com.WealthManager.UserInfo.data.dao;
 
-import com.WealthManager.UserInfo.model.enums.Gender;
-import com.WealthManager.UserInfo.model.enums.Role;
+import com.WealthManager.UserInfo.data.enums.Gender;
+import com.WealthManager.UserInfo.data.enums.Role;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -15,7 +16,6 @@ import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.FieldType;
 import org.springframework.data.annotation.Version;
 
-import java.io.Serializable;
 import java.util.Date;
 
 @Getter
@@ -35,7 +35,7 @@ public class UserInfo{
     @Field("_id")
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Indexed(unique = true)
-    private Long id;
+    private String userId;
     @NotBlank
     private String name;
     @NotBlank
@@ -44,10 +44,14 @@ public class UserInfo{
     private String email;
     @NotBlank
     @Size(max = 12, min = 10)
-    private String mobile;
+    private String phoneNumber;
 
     @Field(targetType = FieldType.STRING)
     private Gender gender;
+    @NotBlank
+    @Pattern(regexp = "^\\d{2}/\\d{2}/\\d{4}$", message = "Invalid date format (DD/MM/YYYY)")
+    private String dob;
+
     private Integer age;
     private String registrationToken;
     private boolean isVerified;
@@ -60,7 +64,5 @@ public class UserInfo{
     @LastModifiedDate
     private Date updatedAt;
 
-
-//    private String roles;
 
 }

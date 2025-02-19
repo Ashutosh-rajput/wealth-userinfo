@@ -1,8 +1,8 @@
 package com.WealthManager.UserInfo.configuration;//package com.trainingmug.practiceplatform.bootstrap;
 
 
-import com.WealthManager.UserInfo.model.dao.UserInfo;
-import com.WealthManager.UserInfo.model.enums.Role;
+import com.WealthManager.UserInfo.data.dao.UserInfo;
+import com.WealthManager.UserInfo.data.enums.Role;
 import com.WealthManager.UserInfo.repo.UserInfoRepo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +12,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor

@@ -1,4 +1,4 @@
-package com.WealthManager.UserInfo.Security;
+package com.WealthManager.UserInfo.security;
 
 import com.Ashutosh.ReportGenerator.Service.ServiceInterface.TokenBlacklistServiceInterface;
 import org.springframework.beans.factory.annotation.Autowired;

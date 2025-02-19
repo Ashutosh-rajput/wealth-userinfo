@@ -1,4 +1,4 @@
-package com.WealthManager.UserInfo.model.enums;
+package com.WealthManager.UserInfo.data.enums;
 
 public enum Gender {
     MALE,

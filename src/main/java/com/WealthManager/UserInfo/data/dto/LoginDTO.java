@@ -1,4 +1,4 @@
-package com.WealthManager.UserInfo.model.dto;
+package com.WealthManager.UserInfo.data.dto;
 
 import jakarta.validation.constraints.Pattern;
 import lombok.*;

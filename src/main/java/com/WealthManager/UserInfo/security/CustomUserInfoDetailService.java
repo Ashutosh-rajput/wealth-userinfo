@@ -1,22 +1,16 @@
-package com.WealthManager.UserInfo.Security;
+package com.WealthManager.UserInfo.security;
 
-import com.WealthManager.UserInfo.exception.ResourceNotFoundException;
-import com.WealthManager.UserInfo.model.dao.UserInfo;
+import com.WealthManager.UserInfo.data.dao.UserInfo;
 import com.WealthManager.UserInfo.repo.UserInfoRepo;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor

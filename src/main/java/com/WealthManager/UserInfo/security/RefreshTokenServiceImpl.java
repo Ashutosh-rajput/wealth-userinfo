@@ -1,4 +1,4 @@
-package com.WealthManager.UserInfo.Security;
+package com.WealthManager.UserInfo.security;
 
 import com.WealthManager.UserInfo.repo.UserInfoRepo;
 import lombok.RequiredArgsConstructor;

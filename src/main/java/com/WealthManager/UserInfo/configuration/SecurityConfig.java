@@ -2,8 +2,8 @@ package com.WealthManager.UserInfo.configuration;
 
 
 
-import com.WealthManager.UserInfo.Security.CustomUserInfoDetailService;
-import com.WealthManager.UserInfo.Security.JwtAuthFilter;
+import com.WealthManager.UserInfo.security.CustomUserInfoDetailService;
+import com.WealthManager.UserInfo.security.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;

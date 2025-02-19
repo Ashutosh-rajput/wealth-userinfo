@@ -1,4 +1,4 @@
-package com.WealthManager.UserInfo.Security;
+package com.WealthManager.UserInfo.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

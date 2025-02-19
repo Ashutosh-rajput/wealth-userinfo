@@ -1,4 +1,4 @@
-package com.WealthManager.UserInfo.model.dao;
+package com.WealthManager.UserInfo.data.dao;
 
 
 public interface DocumentEntity {
