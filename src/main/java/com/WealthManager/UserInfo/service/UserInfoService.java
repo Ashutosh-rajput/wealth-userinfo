@@ -10,9 +10,9 @@ import com.WealthManager.UserInfo.data.dto.UserUpdateDTO;
 public interface UserInfoService {
     SuccessResponse registerUser(UserRegistrationDTO  userDTO);
 
-    SuccessResponse verifyUser(UserUpdateDTO userUpdateDTO);
+    SuccessResponse verifyUser(String email,String registrationToken);
 
-    SuccessResponse getUserById(Long id);
+    SuccessResponse getUserById(String userId);
 
     SuccessResponse getUserByName(String username);
 
@@ -20,13 +20,12 @@ public interface UserInfoService {
 
     SuccessResponse getAllUsers();
 
-    SuccessResponse deleteUserById(Long id);
+    SuccessResponse deleteUserById(String UserId);
 
     SuccessResponse deleteAllUsers();
 
-    SuccessResponse updateUserById(UserUpdateDTO userUpdateDTO, Long userId);
+    SuccessResponse updateUserById(UserUpdateDTO userUpdateDTO, String userId);
 
-    SuccessResponse deleteUserByID(Long userId);
 
     SuccessResponse getUserByEmail(String email);
 

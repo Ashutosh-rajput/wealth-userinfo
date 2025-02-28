@@ -3,6 +3,7 @@ package com.WealthManager.UserInfo.constant;
 public class ApiConstant {
     //Post
     public static final String SAVE_USER = "/registerUser";
+    public static final String VERIFY_USER = "/verifyUser";
     //Get
     public static final String GET_USER = "/getUser";
     public static final String GET_ALL_USERS = "/getAllUsers";
