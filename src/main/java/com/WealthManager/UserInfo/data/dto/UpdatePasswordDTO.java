@@ -20,9 +20,6 @@ public class UpdatePasswordDTO {
     private String OTP;
 
     @NotBlank(message = "Password is required")
-//    @Size(min = 8, message = "Password must be at least 8 characters long")
-//    @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-zA-Z])(?=.*[!@#$%^&*]).*$",
-//            message = "Password must contain at least one digit, one letter, and one special character")
     @ValidPassword
     private String password;
 }

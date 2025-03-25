@@ -1,18 +1,13 @@
 package com.WealthManager.UserInfo.service.implimentation;
 
+import com.Ashutosh.RedisCache.CacheService;
 import com.WealthManager.UserInfo.constant.ApiConstant;
 import com.WealthManager.UserInfo.converter.UserInfoConverter;
+import com.WealthManager.UserInfo.data.dao.UserInfo;
+import com.WealthManager.UserInfo.data.dto.*;
 import com.WealthManager.UserInfo.data.enums.Role;
 import com.WealthManager.UserInfo.data.model.UserProfileModel;
-import com.WealthManager.UserInfo.exception.BadRequestException;
-import com.WealthManager.UserInfo.exception.EmailAlreadyExists;
-import com.WealthManager.UserInfo.exception.PhoneNumberAlreadyExists;
-import com.WealthManager.UserInfo.data.dao.UserInfo;
-import com.WealthManager.UserInfo.data.dto.ChangePasswordDTO;
-import com.WealthManager.UserInfo.data.dto.SuccessResponse;
-import com.WealthManager.UserInfo.data.dto.UserRegistrationDTO;
-import com.WealthManager.UserInfo.data.dto.UserUpdateDTO;
-import com.WealthManager.UserInfo.exception.UserNotFoundException;
+import com.WealthManager.UserInfo.exception.*;
 import com.WealthManager.UserInfo.repo.UserInfoRepo;
 import com.WealthManager.UserInfo.service.UserInfoService;
 import com.WealthManager.UserInfo.util.counter.CounterService;
@@ -20,10 +15,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.attachment.softnerve.service.KafkaService;
-import org.attachment.softnerve_cache.redis.CacheEntryNotFoundException;
-import org.attachment.softnerve_cache.redis.CacheService;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,7 +22,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 
 @Service
@@ -77,122 +67,292 @@ public class UserInfoServiceImpl implements UserInfoService {
     }
 
     @Override
-    public SuccessResponse verifyUser(String email,String registrationToken) {
+    public SuccessResponse verifyUser(String email, String registrationToken) {
         log.info("Verifying user with email: {}", email);
-        UserInfo userInfo=getUserInfoFromCacheOrDBByIdOrEmail(email,"verifyUser");
-        if(userInfo==null) {
+        UserInfo userInfo = getUserInfoFromCacheOrDBByIdOrEmail(email, "verifyUser");
+        if (userInfo == null) {
             log.error("User with email: {} not found", email);
             throw new UserNotFoundException("User not found wth email: " + email);
         }
-        if(!userInfo.getRegistrationToken().equals(registrationToken)) {
+        if (!userInfo.getRegistrationToken().equals(registrationToken)) {
             log.error("User with email: {} not matching registration token", email);
             throw new BadRequestException("Registration token does not match");
         }
         userInfo.setVerified(true);
         userInfoRepo.save(userInfo);
-        cacheService.addEntry("USER_INFO",userInfo.getEmail(),userInfo);
-        cacheService.addEntry("USER_EMAIL",userInfo.getUserId(),userInfo);
+        cacheService.addEntry("USER_INFO", userInfo.getEmail(), userInfo);
+        cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
         kafkaService.publishToKafkaAsync("SendRegistrationSuccessful", userInfo.getUserId(), userInfo.toString());
         log.info("User with email: {} successfully verified", email);
         return new SuccessResponse(
                 HttpStatus.ACCEPTED.value(),
-                "User registered successfully with email: "+userInfo.getEmail(),
+                "User registered successfully with email: " + userInfo.getEmail(),
                 ApiConstant.VERIFY_USER,
-                new SuccessResponse.ResponseData<>(Collections.emptyList(),null)
+                new SuccessResponse.ResponseData<>(Collections.emptyList(), null)
         );
     }
 
     @Override
     public SuccessResponse getUserById(String userId) {
         log.info("Getting user by id: {}", userId);
-        UserInfo userInfo=getUserInfoFromCacheOrDBByIdOrEmail(userId,"getUserById");
-        if(userInfo==null) {
-            log.error("User with id: {} not found", userId);
-            throw new UserNotFoundException("User not found wth id: " + userId);
-        }
-        UserProfileModel userProfileModel=UserInfoConverter.toModel(userInfo);
+        UserInfo userInfo = getUserInfoFromCacheOrDBByIdOrEmail(userId, "getUserById");
+        UserProfileModel userProfileModel = UserInfoConverter.toModel(userInfo);
         return new SuccessResponse(
                 HttpStatus.FOUND.value(),
                 "User found with Id.",
                 ApiConstant.GET_USER_BY_ID,
-                new SuccessResponse.ResponseData<>(Collections.singletonList(userProfileModel),null)
+                new SuccessResponse.ResponseData<>(Collections.singletonList(userProfileModel), null)
         );
     }
 
     @Override
-    public SuccessResponse getAllUsers() {
-//        log.info("Getting all users with");
-//        try {
-//            long startTime = System.currentTimeMillis();
-//            List<Object> cachedobject = cacheService.getAllEntries(page, size, "Patient");
-//            log.info("Cache hit for getAllPatient - Page: {}, Size: {}", page, size);
-//            List<Patient> patients = cachedobject.stream()
-////                    .filter(obj -> obj instanceof Patient)
-//                    .map(obj -> (Patient) obj) // Casting cached objects back to Patient type
-//                    .toList();
-//            // Convert the list of Patient entities to FetchPatientDTOs
-//            long endTime = System.currentTimeMillis();
-//            log.info("Data fetch took {} ms from cache.", (endTime - startTime));
-//            return PatientConverter.convertToFetchPatientDTOList(patients);
-//
-//        } catch (CacheEntryNotFoundException e) {
-//            log.info("Cache miss for getAllPatient - Fetching from database");
-//            long startTimedb = System.currentTimeMillis();
-//            Pageable pageable = PageRequest.of(page, size);
-//            List<Patient> patients = patientRepository.findAll(pageable).getContent();
-//            // Cache the database results for future calls
-//            cacheService.addAllEntries(new ArrayList<>(patients), page, size, "Patient");
-//            long endTimedb = System.currentTimeMillis();
-//            log.info("Data fetch took {} ms from DB", (endTimedb - startTimedb));
-//            // Handle case where no patients are found
-//            if (patients.isEmpty()) {
-//                log.info("No patients found");
-//                return Collections.emptyList();
-//            }
-//            // Convert the list of Patient entities to FetchPatientDTOs
-//            return PatientConverter.convertToFetchPatientDTOList(patients);
-//        }return null;
+    public SuccessResponse getAllUsers(int page, int size) {
+        log.info("Getting all users");
+        try {
+            long startTime = System.currentTimeMillis();
+            List<Object> cachedObjects = cacheService.getAllEntries(page, size, "USER_INFO");
+            log.info("Cache hit for getAllUsers");
+            List<UserInfo> users = cachedObjects.stream()
+                    .filter(obj -> obj instanceof UserInfo)
+                    .map(obj -> (UserInfo) obj)
+                    .toList();
+
+            List<UserProfileModel> userProfiles = users.stream()
+                    .map(UserInfoConverter::toModel)
+                    .toList();
+
+            long endTime = System.currentTimeMillis();
+            log.info("Data fetch took {} ms from cache.", (endTime - startTime));
+
+            return new SuccessResponse(
+                    HttpStatus.OK.value(),
+                    "Users fetched successfully",
+                    ApiConstant.GET_ALL_USERS,
+                    new SuccessResponse.ResponseData<>(userProfiles, null)
+            );
+        } catch (CacheEntryNotFoundException e) {
+            log.info("Cache miss for getAllUsers - Fetching from database");
+            long startTimeDb = System.currentTimeMillis();
+            List<UserInfo> users = userInfoRepo.findAll();
+
+            if (users.isEmpty()) {
+                log.info("No users found");
+                return new SuccessResponse(
+                        HttpStatus.OK.value(),
+                        "No users found",
+                        ApiConstant.GET_ALL_USERS,
+                        new SuccessResponse.ResponseData<>(Collections.emptyList(), null)
+                );
+            }
+
+            List<UserProfileModel> userProfiles = users.stream()
+                    .map(UserInfoConverter::toModel)
+                    .toList();
+
+            // Cache the results for future calls
+            cacheService.addAllEntries(new ArrayList<>(users), page, size, "USER_INFO");
+
+            long endTimeDb = System.currentTimeMillis();
+            log.info("Data fetch took {} ms from DB", (endTimeDb - startTimeDb));
+
+            return new SuccessResponse(
+                    HttpStatus.OK.value(),
+                    "Users fetched successfully",
+                    ApiConstant.GET_ALL_USERS,
+                    new SuccessResponse.ResponseData<>(userProfiles, null)
+            );
+        }
     }
 
     @Override
     public SuccessResponse deleteUserById(String userId) {
-        return null;
+        log.info("Deleting user with id: {}", userId);
+        UserInfo userInfo = getUserInfoFromCacheOrDBByIdOrEmail(userId, "deleteUserById");
+        if (userInfo == null) {
+            log.error("User with id: {} not found", userId);
+            throw new UserNotFoundException("User not found with id: " + userId);
+        }
+
+        userInfoRepo.delete(userInfo);
+
+        // Remove from cache
+        cacheService.deleteEntry("USER_INFO", userInfo.getUserId());
+        cacheService.deleteEntry("USER_INFO", userInfo.getEmail());
+
+        // Publish Kafka event for user deletion
+        kafkaService.publishToKafkaAsync("UserDeleted", userInfo.getUserId(), userInfo.toString());
+
+        return new SuccessResponse(
+                HttpStatus.OK.value(),
+                "User deleted successfully",
+                ApiConstant.DELETE_USER_BY_ID,
+                null
+        );
     }
 
     @Override
     public SuccessResponse deleteAllUsers() {
-        return null;
+        log.info("Deleting all users");
+        userInfoRepo.deleteAll();
+
+
+        cacheService.deleteAllKeys();
+
+        return new SuccessResponse(
+                HttpStatus.OK.value(),
+                "All users deleted successfully",
+                ApiConstant.DELETE_ALL_USERS,
+                null
+        );
     }
 
     @Override
     public SuccessResponse updateUserById(UserUpdateDTO userUpdateDTO, String userId) {
-        return null;
+        log.info("Updating user with id: {}", userId);
+        UserInfo userInfo = getUserInfoFromCacheOrDBByIdOrEmail(userId, "updateUserById");
+        if (userInfo == null) {
+            log.error("User with id: {} not found", userId);
+            throw new UserNotFoundException("User not found with id: " + userId);
+        }
+
+        // Update user information
+        if (userUpdateDTO.getName() != null) {
+            userInfo.setName(userUpdateDTO.getName());
+        }
+        if (userUpdateDTO.getPhoneNumber() != null) {
+            // Check if phone number already exists for another user
+            if (!userInfo.getPhoneNumber().equals(userUpdateDTO.getPhoneNumber()) &&
+                    userInfoRepo.existsByPhoneNumber(userUpdateDTO.getPhoneNumber())) {
+                throw new PhoneNumberAlreadyExists("Phone number already exists. Please use another phone number.");
+            }
+            userInfo.setPhoneNumber(userUpdateDTO.getPhoneNumber());
+        }
+        if (userUpdateDTO.getDob() != null) {
+            userInfo.setDob(userUpdateDTO.getDob());
+            userInfo.setAge(calculateAge(userInfo.getDob()));
+        }
+        if (userUpdateDTO.getGender() != null) {
+            userInfo.setGender(userUpdateDTO.getGender());
+        }
+
+        userInfo.setUpdatedAt(new Date());
+        userInfoRepo.save(userInfo);
+
+        // Update cache
+        cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
+        cacheService.addEntry("USER_INFO", userInfo.getEmail(), userInfo);
+
+
+        UserProfileModel userProfileModel = UserInfoConverter.toModel(userInfo);
+        return new SuccessResponse(
+                HttpStatus.OK.value(),
+                "User updated successfully",
+                ApiConstant.UPDATE_USER_BY_ID,
+                new SuccessResponse.ResponseData<>(Collections.singletonList(userProfileModel), null)
+        );
     }
 
 
     @Override
     public SuccessResponse getUserByEmail(String email) {
-        return null;
+        log.info("Getting user by email: {}", email);
+        UserInfo userInfo = getUserInfoFromCacheOrDBByIdOrEmail(email.toLowerCase(), "getUserByEmail");
+        if (!userInfo.isVerified()) {
+            throw new UserNotVerifiedException("Please verify your email.");
+        }
+        UserProfileModel userProfileModel = UserInfoConverter.toModel(userInfo);
+        return new SuccessResponse(
+                HttpStatus.FOUND.value(),
+                "User found with email",
+                ApiConstant.GET_USER_BY_EMAIL,
+                new SuccessResponse.ResponseData<>(Collections.singletonList(userProfileModel), null)
+        );
     }
 
     @Override
     public boolean isUserExist(String email) {
-        return false;
+        log.info("Checking if user exists with email: {}", email);
+        try {
+            String key = cacheService.generateKey("USER_INFO", email.toLowerCase());
+            Object cachedUser = cacheService.getEntry(key);
+            log.info("Cache hit for isUserExist - Key: {}", key);
+            return cachedUser != null;
+        } catch (CacheEntryNotFoundException e) {
+            log.info("Cache miss for isUserExist - Checking database");
+            return userInfoRepo.existsByEmail(email.toLowerCase());
+        }
     }
 
     @Override
-    public SuccessResponse changePassword(ChangePasswordDTO changePasswordDTO) {
-        return null;
+    public SuccessResponse changePassword(String email, ChangePasswordDTO changePasswordDTO) {
+        log.info("Changing password for user with email: {}", email);
+        UserInfo userInfo = getUserInfoFromCacheOrDBByIdOrEmail(email.toLowerCase(), "changePassword");
+
+        // Verify old password
+        if (!passwordEncoder.matches(changePasswordDTO.getCurrentPassword(), userInfo.getPassword())) {
+            log.error("Invalid old password for user with email: {}", email);
+            throw new BadRequestException("Invalid old password");
+        }
+        // Verify new password
+        if (!changePasswordDTO.getNewPassword().equals(changePasswordDTO.getConfirmPassword())) {
+            log.error("New password doesn't match with confirm password user with email: {}", email);
+            throw new BadRequestException("Invalid request.");
+        }
+
+        // Update password
+        userInfo.setPassword(passwordEncoder.encode(changePasswordDTO.getNewPassword()));
+        userInfoRepo.save(userInfo);
+
+        // Update cache
+        cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
+        cacheService.addEntry("USER_INFO", userInfo.getEmail(), userInfo);
+
+        // Publish Kafka event for password change
+        kafkaService.publishToKafkaAsync("PasswordChanged", userInfo.getUserId(), "Password changed successfully");
+
+        return new SuccessResponse(
+                HttpStatus.OK.value(),
+                "Password changed successfully",
+                ApiConstant.CHANGE_PASSWORD,
+                null
+        );
     }
 
     @Override
     public SuccessResponse forgotPassword(String email) {
-        return null;
+        log.info("Processing forgot password request for email: {}", email);
+        UserInfo userInfo = getUserInfoFromCacheOrDBByIdOrEmail(email, "forgotPassword");
+        if (!userInfo.isVerified()) {
+            throw new UserNotVerifiedException("Please verify your email.");
+        }
+        String otp = generateOTP();
+        // Publish Kafka event for password change otp
+        kafkaService.publishToKafkaAsync("SendPasswordChangedOtpEmail", userInfo.getUserId(), userInfo.toString());
+        cacheService.addOtp("USER_OTP", email, otp, 300);
+
+        return new SuccessResponse(
+                HttpStatus.OK.value(),
+                "OTP sent successfully",
+                ApiConstant.FORGOT_PASSWORD.replace("{email}", email),
+                new SuccessResponse.ResponseData<>(Collections.emptyList(), null)
+        );
+
     }
 
     @Override
-    public SuccessResponse updatePasswordByOtp(UserUpdateDTO userUpdateDTO) {
-        return null;
+    public SuccessResponse updatePasswordByOtp(UpdatePasswordDTO updatePasswordDTO) {
+        UserInfo userInfo = getUserInfoFromCacheOrDBByIdOrEmail(updatePasswordDTO.getEmail(), "updatePasswordByOtp");
+        cacheService.verifyOtp("USER_OTP", updatePasswordDTO.getEmail(), updatePasswordDTO.getOTP());
+        userInfo.setPassword(passwordEncoder.encode(updatePasswordDTO.getPassword()));
+        userInfoRepo.save(userInfo);
+        cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
+        cacheService.addEntry("USER_INFO", userInfo.getEmail(), userInfo);
+        return SuccessResponse.builder()
+                .statusCode(200)
+                .message("Password updated successfully")
+                .path(ApiConstant.RESET_PASSWORD)
+                .responseData(null)
+                .build();
     }
 
     @Override
@@ -217,19 +377,21 @@ public class UserInfoServiceImpl implements UserInfoService {
             log.info("Cache miss for {} - Fetching from database", methodName);
             String userIdPattern = "^USER\\d{10}$";
             if (userIdOrEmail.matches(userIdPattern)) {
-                userInfoRepo.findById(userIdOrEmail).map(userInfo -> {
-                            cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
-                            return userInfo;
-                        })
-                        .orElse(null);
-            } else {
-                UserInfo userInfo = userInfoRepo.findByEmail(userIdOrEmail);
-                if (userInfo != null) {
-                    cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
-                }
+                UserInfo userInfo=userInfoRepo.findById(userIdOrEmail)
+                        .orElseThrow(() -> new UserNotFoundException("User with email " + userIdOrEmail + " not found"));
+                cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
                 return userInfo;
+
             }
-            return null;
+            UserInfo userInfo = userInfoRepo.findByEmail(userIdOrEmail);
+            if (userInfo == null) {
+                throw new UserNotFoundException("User with email " + userIdOrEmail + " not found");
+
+            }
+            cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
+            return userInfo;
+
+
         }
     }
 
@@ -257,6 +419,12 @@ public class UserInfoServiceImpl implements UserInfoService {
 
     private String generateRegistrationToken() {
         return UUID.randomUUID().toString();
+    }
+
+    // Generates a random 4-digit OTP.
+    private String generateOTP() {
+        Random rand = new Random();
+        return String.format("%04d", rand.nextInt(10000));
     }
 
 

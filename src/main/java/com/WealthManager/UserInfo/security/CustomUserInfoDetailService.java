@@ -17,6 +17,7 @@ import java.util.Collections;
 public class CustomUserInfoDetailService implements UserDetailsService {
 
     private final UserInfoRepo userInfoRepo;
+
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         UserInfo userInfo = userInfoRepo.findByEmail(email);

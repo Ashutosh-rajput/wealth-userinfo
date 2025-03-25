@@ -1,26 +1,25 @@
 package com.WealthManager.UserInfo.security;
 
-import com.Ashutosh.ReportGenerator.Service.ServiceInterface.TokenBlacklistServiceInterface;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
+import com.Ashutosh.RedisCache.CacheService;
+import com.WealthManager.UserInfo.security.Interface.TokenBlacklistServiceInterface;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.TimeUnit;
-
 @Service
+@RequiredArgsConstructor
 public class TokenBlacklistServiceImpl implements TokenBlacklistServiceInterface {
     private static final String BLACKLIST_PREFIX = "blacklist:";
 
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private final CacheService cacheService;
+
 
     @Override
     public void addToBlacklist(String token) {
-        redisTemplate.opsForValue().set(BLACKLIST_PREFIX + token, "true", 7, TimeUnit.DAYS);
+        cacheService.addToSet(BLACKLIST_PREFIX + token, "true", 70000);
     }
 
     @Override
     public boolean isBlacklisted(String token) {
-        return redisTemplate.hasKey(BLACKLIST_PREFIX + token);
+        return cacheService.exitsInSet(BLACKLIST_PREFIX + token);
     }
 }

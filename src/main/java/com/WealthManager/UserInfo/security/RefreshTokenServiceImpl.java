@@ -1,6 +1,12 @@
 package com.WealthManager.UserInfo.security;
 
+import com.WealthManager.UserInfo.data.dao.RefreshToken;
+import com.WealthManager.UserInfo.data.dao.UserInfo;
+import com.WealthManager.UserInfo.exception.RefreshTokenExpiredException;
 import com.WealthManager.UserInfo.repo.UserInfoRepo;
+import com.WealthManager.UserInfo.security.Interface.RefreshTokenRepo;
+import com.WealthManager.UserInfo.security.Interface.RefreshTokenServiceInterface;
+import com.WealthManager.UserInfo.util.counter.CounterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -14,12 +20,16 @@ import java.util.UUID;
 public class RefreshTokenServiceImpl implements RefreshTokenServiceInterface {
     private final RefreshTokenRepo refreshTokenRepo;
     private final UserInfoRepo userInfoRepo;
-    @Override
-    public RefreshToken createRefreshToken(String username) {
-        UserInfo userInfo = userInfoRepo.findByusername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    private final CounterService counterService;
 
-        Optional<RefreshToken> existingTokenOpt = refreshTokenRepo.findByUserInfo(userInfo);
+    @Override
+    public RefreshToken createRefreshToken(String email) {
+        UserInfo userInfo = userInfoRepo.findByEmail(email);
+        if (userInfo == null) {
+            throw new UsernameNotFoundException("User not found");
+        }
+
+        Optional<RefreshToken> existingTokenOpt = refreshTokenRepo.findByUserid(userInfo.getUserId());
 
         RefreshToken refreshToken;
         if (existingTokenOpt.isPresent()) {
@@ -28,24 +38,16 @@ public class RefreshTokenServiceImpl implements RefreshTokenServiceInterface {
             refreshToken.setExpiryDate(Instant.now().plusMillis(60000));
         } else {
             refreshToken = RefreshToken.builder()
-                    .userInfo(userInfo)
+                    .id(counterService.getNextRefreshTokeId())
                     .token(UUID.randomUUID().toString())
                     .expiryDate(Instant.now().plusMillis(60000))
+                    .userid(userInfo.getUserId())
                     .build();
         }
 
         return refreshTokenRepo.save(refreshToken);
     }
 
-
-//    public RefreshToken createRefreshToken(String username) {
-//        RefreshToken refreshToken=RefreshToken.builder()
-//                .userInfo(userInfoRepo.findByusername(username).orElseThrow(()-> new UsernameNotFoundException("user not found")))
-//                .token(UUID.randomUUID().toString())
-//                .expiryDate(Instant.now().plusMillis(600000))
-//                .build();
-//        return refreshTokenRepo.save(refreshToken);
-//    }
 
     @Override
     public Optional<RefreshToken> findByToken(String token) {

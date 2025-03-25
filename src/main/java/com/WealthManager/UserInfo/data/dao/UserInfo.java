@@ -3,7 +3,6 @@ package com.WealthManager.UserInfo.data.dao;
 import com.WealthManager.UserInfo.data.enums.Gender;
 import com.WealthManager.UserInfo.data.enums.Role;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -15,6 +14,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.FieldType;
 import org.springframework.data.annotation.Version;
+import org.springframework.data.annotation.Id;
+
 
 import java.util.Date;
 

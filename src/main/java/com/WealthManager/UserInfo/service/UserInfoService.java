@@ -2,10 +2,7 @@ package com.WealthManager.UserInfo.service;
 
 
 
-import com.WealthManager.UserInfo.data.dto.ChangePasswordDTO;
-import com.WealthManager.UserInfo.data.dto.SuccessResponse;
-import com.WealthManager.UserInfo.data.dto.UserRegistrationDTO;
-import com.WealthManager.UserInfo.data.dto.UserUpdateDTO;
+import com.WealthManager.UserInfo.data.dto.*;
 
 public interface UserInfoService {
     SuccessResponse registerUser(UserRegistrationDTO  userDTO);
@@ -18,7 +15,7 @@ public interface UserInfoService {
 
     SuccessResponse getUserByPhoneNumber(String phoneNumber);
 
-    SuccessResponse getAllUsers();
+    SuccessResponse getAllUsers(int page, int size);
 
     SuccessResponse deleteUserById(String UserId);
 
@@ -31,11 +28,11 @@ public interface UserInfoService {
 
     boolean isUserExist(String email);
 
-    SuccessResponse changePassword(ChangePasswordDTO changePasswordDTO);
+    SuccessResponse changePassword(String email,ChangePasswordDTO changePasswordDTO);
 
     SuccessResponse forgotPassword(String email);
 
-    SuccessResponse updatePasswordByOtp(UserUpdateDTO userUpdateDTO);
+    SuccessResponse updatePasswordByOtp(UpdatePasswordDTO updatePasswordDTO);
 
 
 

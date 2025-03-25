@@ -1,10 +1,8 @@
 package com.WealthManager.UserInfo.configuration;
 
 
-
 import com.WealthManager.UserInfo.security.CustomUserInfoDetailService;
 import com.WealthManager.UserInfo.security.JwtAuthFilter;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +13,7 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -27,24 +26,29 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
-//    @Autowired
-//    private JwtAuthFilter jwtAuthFilter;
 
-    @Autowired
-    @Qualifier("handlerExceptionResolver")
-    private HandlerExceptionResolver exceptionResolver;
+
+    private final CustomUserInfoDetailService customUserInfoDetailService;
+    private final HandlerExceptionResolver exceptionResolver;
+
+    public SecurityConfig(CustomUserInfoDetailService customUserInfoDetailService,
+                          @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver) {
+        this.customUserInfoDetailService = customUserInfoDetailService;
+        this.exceptionResolver = exceptionResolver;
+    }
+
 
     private final String[] SWAGGER_URLS = {
             "/swagger-resources/**", "swagger-ui/**", "/swagger-ui/index.html", "/v3/api-docs/**", "/webjars/**", "/docs"
     };
 
     @Bean
-    public UserDetailsService userDetailsService(){
-        return new CustomUserInfoDetailService();
+    public UserDetailsService userDetailsService() {
+        return customUserInfoDetailService;
     }
 
     @Bean
-    public JwtAuthFilter jwtAuthFilter(){
+    public JwtAuthFilter jwtAuthFilter() {
         return new JwtAuthFilter(exceptionResolver);
     }
 
@@ -52,9 +56,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/user/welcome", "/user/create-user","/login/autologin","/login/refreshtoken").permitAll()
+                        .requestMatchers("/user/welcome", "/user/create-user", "/login/autologin", "/login/refreshtoken").permitAll()
                         .requestMatchers(SWAGGER_URLS).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -68,14 +72,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
-
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider(){
-        DaoAuthenticationProvider authenticationProvider=new DaoAuthenticationProvider();
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
         authenticationProvider.setUserDetailsService(userDetailsService());
         authenticationProvider.setPasswordEncoder(passwordEncoder());
         return authenticationProvider;
