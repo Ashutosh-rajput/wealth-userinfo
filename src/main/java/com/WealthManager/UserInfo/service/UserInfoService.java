@@ -3,11 +3,19 @@ package com.WealthManager.UserInfo.service;
 
 
 import com.WealthManager.UserInfo.data.dto.*;
+import com.WealthManager.UserInfo.data.model.JwtResponse;
+import com.WealthManager.UserInfo.data.model.SuccessResponse;
+
+import java.time.Instant;
 
 public interface UserInfoService {
     SuccessResponse registerUser(UserRegistrationDTO  userDTO);
 
     SuccessResponse verifyUser(String email,String registrationToken);
+
+    JwtResponse login(LoginDTO loginDTO);
+
+    JwtResponse getAccessTokenByRefreshToken(RefreshTokenRequest refreshTokenRequest);
 
     SuccessResponse getUserById(String userId);
 

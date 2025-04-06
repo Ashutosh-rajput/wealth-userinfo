@@ -1,14 +1,21 @@
 package com.WealthManager.UserInfo.service.implimentation;
 
+import com.Ashutosh.RedisCache.CacheEntryNotFoundException;
 import com.Ashutosh.RedisCache.CacheService;
 import com.WealthManager.UserInfo.constant.ApiConstant;
 import com.WealthManager.UserInfo.converter.UserInfoConverter;
+import com.WealthManager.UserInfo.data.dao.RefreshToken;
 import com.WealthManager.UserInfo.data.dao.UserInfo;
 import com.WealthManager.UserInfo.data.dto.*;
 import com.WealthManager.UserInfo.data.enums.Role;
+import com.WealthManager.UserInfo.data.model.JwtResponse;
+import com.WealthManager.UserInfo.data.model.SuccessResponse;
+import com.WealthManager.UserInfo.data.model.UserEmailModel;
 import com.WealthManager.UserInfo.data.model.UserProfileModel;
 import com.WealthManager.UserInfo.exception.*;
 import com.WealthManager.UserInfo.repo.UserInfoRepo;
+import com.WealthManager.UserInfo.security.Interface.RefreshTokenRepo;
+import com.WealthManager.UserInfo.security.JwtService;
 import com.WealthManager.UserInfo.service.UserInfoService;
 import com.WealthManager.UserInfo.util.counter.CounterService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,9 +23,17 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.attachment.softnerve.service.KafkaService;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
@@ -34,6 +49,11 @@ public class UserInfoServiceImpl implements UserInfoService {
     private final CacheService cacheService;
     private final CounterService counterService;
     private final PasswordEncoder passwordEncoder;
+    private final RefreshTokenRepo refreshTokenRepo;
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
+    private final UserDetailsService userDetailsService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
 
@@ -55,7 +75,7 @@ public class UserInfoServiceImpl implements UserInfoService {
         userInfoRepo.save(userInfo);
         log.info("Data storing in Mongo took {} ms", (System.currentTimeMillis() - startTime));
         log.info("Publishing Kafka event to send verification email for user with ID: {}", userInfo.getUserId());
-        kafkaService.publishToKafkaAsync("SendVerificationEmail", userInfo.getUserId(), userInfo.toString());
+        kafkaService.publishToKafkaAsync("SendVerificationEmail", userInfo.getUserId(), UserInfoConverter.toEmailModel(userInfo));
 
         // Return the ApiResponse using the constant path
         return new SuccessResponse(
@@ -82,7 +102,7 @@ public class UserInfoServiceImpl implements UserInfoService {
         userInfoRepo.save(userInfo);
         cacheService.addEntry("USER_INFO", userInfo.getEmail(), userInfo);
         cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
-        kafkaService.publishToKafkaAsync("SendRegistrationSuccessful", userInfo.getUserId(), userInfo.toString());
+        kafkaService.publishToKafkaAsync("SendRegistrationSuccessful", userInfo.getUserId(), UserInfoConverter.toEmailModel(userInfo));
         log.info("User with email: {} successfully verified", email);
         return new SuccessResponse(
                 HttpStatus.ACCEPTED.value(),
@@ -91,6 +111,61 @@ public class UserInfoServiceImpl implements UserInfoService {
                 new SuccessResponse.ResponseData<>(Collections.emptyList(), null)
         );
     }
+
+    @Override
+    public JwtResponse login(LoginDTO loginDTO) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(loginDTO.getEmail(), loginDTO.getPassword()));
+
+        if (authentication.isAuthenticated()) {
+            // Get UserDetails from authentication
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+            // Extract role from granted authorities
+            String roleName = userDetails.getAuthorities().stream()
+                    .findFirst()
+                    .map(GrantedAuthority::getAuthority)
+                    .orElseThrow(() -> new IllegalStateException("No authority found for user"));
+
+            Role role = Role.valueOf(roleName); // Convert back to enum
+
+            RefreshToken refreshToken = this.createRefreshToken(loginDTO.getEmail());
+            log.info("Login successfully with email: {} Role: {}", loginDTO.getEmail(), role);
+            return JwtResponse.builder()
+                    .accessToken(jwtService.generateToken(loginDTO.getEmail(), role))
+                    .refreshToken(refreshToken.getToken())
+                    .email(loginDTO.getEmail())
+                    .role(role) // Include role in response if needed
+                    .build();
+        } else {
+            throw new UsernameNotFoundException("invalid User Request");
+        }
+    }
+
+
+    @Override
+    public JwtResponse getAccessTokenByRefreshToken(RefreshTokenRequest refreshTokenRequest) {
+        return this.findByToken(refreshTokenRequest.getRefreshToken())
+                .map(this::verifyExpiration)
+                .map(refreshToken -> {
+                    String email = refreshToken.getEmail();
+
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                    String roleName = userDetails.getAuthorities().stream()
+                            .findFirst()
+                            .map(GrantedAuthority::getAuthority)
+                            .orElseThrow(() -> new IllegalStateException("No authority found for user"));
+
+                    String accessToken = jwtService.generateToken(email, Role.valueOf(roleName));
+                    return JwtResponse.builder()
+                            .accessToken(accessToken)
+                            .refreshToken(refreshTokenRequest.getRefreshToken())
+                            .email(refreshToken.getEmail())
+                            .build();
+                }).orElseThrow(() -> new RefreshTokenNotFoundException(
+                        "Refresh token is not in database"));
+    }
+
 
     @Override
     public SuccessResponse getUserById(String userId) {
@@ -180,7 +255,7 @@ public class UserInfoServiceImpl implements UserInfoService {
         cacheService.deleteEntry("USER_INFO", userInfo.getEmail());
 
         // Publish Kafka event for user deletion
-        kafkaService.publishToKafkaAsync("UserDeleted", userInfo.getUserId(), userInfo.toString());
+        kafkaService.publishToKafkaAsync("UserDeletedEmail", userInfo.getUserId(), userInfo.toString());
 
         return new SuccessResponse(
                 HttpStatus.OK.value(),
@@ -308,7 +383,7 @@ public class UserInfoServiceImpl implements UserInfoService {
         cacheService.addEntry("USER_INFO", userInfo.getEmail(), userInfo);
 
         // Publish Kafka event for password change
-        kafkaService.publishToKafkaAsync("PasswordChanged", userInfo.getUserId(), "Password changed successfully");
+        kafkaService.publishToKafkaAsync("PasswordChanged", userInfo.getUserId(), UserInfoConverter.toEmailModel(userInfo));
 
         return new SuccessResponse(
                 HttpStatus.OK.value(),
@@ -327,7 +402,9 @@ public class UserInfoServiceImpl implements UserInfoService {
         }
         String otp = generateOTP();
         // Publish Kafka event for password change otp
-        kafkaService.publishToKafkaAsync("SendPasswordChangedOtpEmail", userInfo.getUserId(), userInfo.toString());
+        UserEmailModel userEmailModel = UserInfoConverter.toEmailModel(userInfo);
+        userEmailModel.setOtp(otp);
+        kafkaService.publishToKafkaAsync("SendPasswordChangedOtpEmail", userInfo.getUserId(), userEmailModel);
         cacheService.addOtp("USER_OTP", email, otp, 300);
 
         return new SuccessResponse(
@@ -347,6 +424,8 @@ public class UserInfoServiceImpl implements UserInfoService {
         userInfoRepo.save(userInfo);
         cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
         cacheService.addEntry("USER_INFO", userInfo.getEmail(), userInfo);
+        kafkaService.publishToKafkaAsync("PasswordChangedEmail", userInfo.getUserId(), UserInfoConverter.toEmailModel(userInfo));
+
         return SuccessResponse.builder()
                 .statusCode(200)
                 .message("Password updated successfully")
@@ -377,7 +456,7 @@ public class UserInfoServiceImpl implements UserInfoService {
             log.info("Cache miss for {} - Fetching from database", methodName);
             String userIdPattern = "^USER\\d{10}$";
             if (userIdOrEmail.matches(userIdPattern)) {
-                UserInfo userInfo=userInfoRepo.findById(userIdOrEmail)
+                UserInfo userInfo = userInfoRepo.findById(userIdOrEmail)
                         .orElseThrow(() -> new UserNotFoundException("User with email " + userIdOrEmail + " not found"));
                 cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
                 return userInfo;
@@ -405,7 +484,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     // Method to check if the email already exists
     private void checkEmailExists(UserRegistrationDTO userRegistrationDTO) {
         if (userInfoRepo.existsByEmail(userRegistrationDTO.getEmail())) {
-            kafkaService.publishToKafkaAsync("SendAlreadyRegisteredEmail", userRegistrationDTO.getUserId(), userRegistrationDTO.toString());
+//            kafkaService.publishToKafkaAsync("SendAlreadyRegisteredEmail", userRegistrationDTO.getUserId(), userRegistrationDTO.toString());
             throw new EmailAlreadyExists("Email already exists. Please use another email.");
         }
     }
@@ -418,6 +497,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     }
 
     private String generateRegistrationToken() {
+        log.info("here 30");
         return UUID.randomUUID().toString();
     }
 
@@ -425,6 +505,40 @@ public class UserInfoServiceImpl implements UserInfoService {
     private String generateOTP() {
         Random rand = new Random();
         return String.format("%04d", rand.nextInt(10000));
+    }
+
+
+    //-------------------------Security----------------------------------------------------------------
+    private RefreshToken createRefreshToken(String email) {
+        UserInfo userInfo = getUserInfoFromCacheOrDBByIdOrEmail(email, "createRefreshToken");
+        Optional<RefreshToken> existingTokenOpt = refreshTokenRepo.findByUserid(userInfo.getUserId());
+        RefreshToken refreshToken;
+        if (existingTokenOpt.isPresent()) {
+            refreshToken = existingTokenOpt.get();
+            refreshToken.setToken(UUID.randomUUID().toString());
+            refreshToken.setExpiryDate(Instant.now().plusMillis(60000));
+        } else {
+            refreshToken = RefreshToken.builder()
+                    .id(counterService.getNextRefreshTokeId())
+                    .token(UUID.randomUUID().toString())
+                    .expiryDate(Instant.now().plusMillis(60000))
+                    .email(userInfo.getEmail())
+                    .build();
+        }
+        return refreshTokenRepo.save(refreshToken);
+    }
+
+    private Optional<RefreshToken> findByToken(String refreshToken) {
+        return refreshTokenRepo.findByToken(refreshToken);
+    }
+
+    private RefreshToken verifyExpiration(RefreshToken refreshToken) {
+        if (refreshToken.getExpiryDate().compareTo(Instant.now()) < 0) {
+            refreshTokenRepo.delete(refreshToken);
+            throw new RefreshTokenExpiredException(refreshToken.getToken() + " Refresh Token was expired.");
+
+        }
+        return refreshToken;
     }
 
 

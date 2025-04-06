@@ -3,6 +3,8 @@ package com.WealthManager.UserInfo.controller;
 
 import com.WealthManager.UserInfo.constant.ApiConstant;
 import com.WealthManager.UserInfo.data.dto.*;
+import com.WealthManager.UserInfo.data.model.JwtResponse;
+import com.WealthManager.UserInfo.data.model.SuccessResponse;
 import com.WealthManager.UserInfo.service.UserInfoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +20,21 @@ public class UserInfoController {
 
     @PostMapping(ApiConstant.SAVE_USER)
     public ResponseEntity<SuccessResponse> registerUser(@Valid @RequestBody UserRegistrationDTO userRegistrationDTO) {
-        return new ResponseEntity<>(userInfoService.registerUser(userRegistrationDTO), HttpStatus.CREATED);
+        return ResponseEntity.ok(userInfoService.registerUser(userRegistrationDTO));
     }
 
     @GetMapping(ApiConstant.VERIFY_USER)
     public ResponseEntity<SuccessResponse> verifyUser(@RequestParam String email, @RequestParam String token) {
         return new ResponseEntity<>(userInfoService.verifyUser(email, token), HttpStatus.OK);
+    }
+    @PostMapping(ApiConstant.LOGIN)
+    public ResponseEntity<JwtResponse> Login(@Valid @RequestBody LoginDTO loginDTO) {
+        return new ResponseEntity<>(userInfoService.login(loginDTO), HttpStatus.OK);
+    }
+
+    @PostMapping(ApiConstant.REFRESH_TOKEN)
+    public ResponseEntity<JwtResponse> RefreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+        return new ResponseEntity<>(userInfoService.getAccessTokenByRefreshToken(refreshTokenRequest), HttpStatus.OK);
     }
 
     @GetMapping(ApiConstant.GET_USER_BY_ID)

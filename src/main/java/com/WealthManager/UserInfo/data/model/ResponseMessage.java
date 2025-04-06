@@ -1,4 +1,4 @@
-package com.WealthManager.UserInfo.data.dto;
+package com.WealthManager.UserInfo.data.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

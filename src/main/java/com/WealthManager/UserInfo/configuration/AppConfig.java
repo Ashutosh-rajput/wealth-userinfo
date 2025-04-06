@@ -12,8 +12,5 @@ public class AppConfig {
     public KafkaService kafkaService(){
         return new KafkaServiceImpl();
     }
-    @Bean
-    public CacheService cacheService(){
-        return new CacheService();
-    }
+
 }

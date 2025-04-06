@@ -1,5 +1,6 @@
 package com.WealthManager.UserInfo.security;
 
+import com.WealthManager.UserInfo.data.enums.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -61,8 +62,9 @@ public class JwtService {
 
 
 
-    public String generateToken(String username){
+    public String generateToken(String username, Role role){
         Map<String,Object> claims=new HashMap<>();
+        claims.put("role", role.name());
         return createToken(claims,username);
 
     }
@@ -76,6 +78,7 @@ public class JwtService {
         Date exp = new Date(expMillis);
 
         return Jwts.builder()
+                .setClaims(claims)
                 .setSubject(username)
                 .setIssuedAt(now)
                 .setExpiration(exp)

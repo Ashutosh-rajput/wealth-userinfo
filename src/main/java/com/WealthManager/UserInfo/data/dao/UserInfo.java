@@ -8,14 +8,13 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 import org.springframework.data.mongodb.core.mapping.FieldType;
-import org.springframework.data.annotation.Version;
-import org.springframework.data.annotation.Id;
-
 
 import java.util.Date;
 
@@ -26,7 +25,7 @@ import java.util.Date;
 @ToString
 @Builder
 @Document(collection = "users")
-public class UserInfo{
+public class UserInfo {
 
     @Version
     private Long version;
@@ -49,13 +48,17 @@ public class UserInfo{
 
     @Field(targetType = FieldType.STRING)
     private Gender gender;
+
     @NotBlank
     @Pattern(regexp = "^\\d{2}/\\d{2}/\\d{4}$", message = "Invalid date format (DD/MM/YYYY)")
     private String dob;
 
     private Integer age;
+
     private String registrationToken;
+
     private boolean isVerified;
+
     @Field(targetType = FieldType.STRING)
     private Role role;
 

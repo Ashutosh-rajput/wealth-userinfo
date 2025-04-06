@@ -3,6 +3,7 @@ package com.WealthManager.UserInfo.converter;
 import com.WealthManager.UserInfo.data.dao.UserInfo;
 import com.WealthManager.UserInfo.data.dto.UserRegistrationDTO;
 import com.WealthManager.UserInfo.data.dto.UserUpdateDTO;
+import com.WealthManager.UserInfo.data.model.UserEmailModel;
 import com.WealthManager.UserInfo.data.model.UserProfileModel;
 
 public class UserInfoConverter {
@@ -37,6 +38,18 @@ public class UserInfoConverter {
                 .age(userInfo.getAge())
                 .build();
     }
+
+    public static UserEmailModel toEmailModel(UserInfo userInfo) {
+        return UserEmailModel.builder()
+                .userId(userInfo.getUserId())
+                .name(userInfo.getName())
+                .email(userInfo.getEmail())
+                .phoneNumber(userInfo.getPhoneNumber())
+                .registrationToken(userInfo.getRegistrationToken())
+                .build();
+    }
+
+
 
 
 }

@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,19 +18,22 @@ import java.io.IOException;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
-    private HandlerExceptionResolver exceptionResolver;
-    @Autowired
-    private JwtService jwtService;
-    @Autowired
-    private CustomUserInfoDetailService customUserInfoDetailService;
-    @Autowired
-    private TokenBlacklistServiceImpl tokenBlacklistService;
+    private final HandlerExceptionResolver exceptionResolver; // Mark as final
+    private final JwtService jwtService;
+    private final CustomUserInfoDetailService customUserInfoDetailService;
+    private final TokenBlacklistServiceImpl tokenBlacklistService;
 
     @Autowired
-    public JwtAuthFilter(HandlerExceptionResolver exceptionResolver) {
+    public JwtAuthFilter(
+            @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver, // Add Qualifier
+            JwtService jwtService,
+            CustomUserInfoDetailService customUserInfoDetailService,
+            TokenBlacklistServiceImpl tokenBlacklistService) {
         this.exceptionResolver = exceptionResolver;
+        this.jwtService = jwtService;
+        this.customUserInfoDetailService = customUserInfoDetailService;
+        this.tokenBlacklistService = tokenBlacklistService;
     }
-
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
     String authHeader = request.getHeader("Authorization");

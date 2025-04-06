@@ -3,6 +3,7 @@ package com.WealthManager.UserInfo.configuration;
 
 import com.WealthManager.UserInfo.security.CustomUserInfoDetailService;
 import com.WealthManager.UserInfo.security.JwtAuthFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,11 +31,15 @@ public class SecurityConfig {
 
     private final CustomUserInfoDetailService customUserInfoDetailService;
     private final HandlerExceptionResolver exceptionResolver;
+    private final JwtAuthFilter jwtAuthFilter; // Inject JwtAuthFilter here
 
+    @Autowired
     public SecurityConfig(CustomUserInfoDetailService customUserInfoDetailService,
-                          @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver) {
+                          @Qualifier("handlerExceptionResolver") HandlerExceptionResolver exceptionResolver,
+                          JwtAuthFilter jwtAuthFilter) { // Inject JwtAuthFilter
         this.customUserInfoDetailService = customUserInfoDetailService;
         this.exceptionResolver = exceptionResolver;
+        this.jwtAuthFilter = jwtAuthFilter;
     }
 
 
@@ -47,18 +52,13 @@ public class SecurityConfig {
         return customUserInfoDetailService;
     }
 
-    @Bean
-    public JwtAuthFilter jwtAuthFilter() {
-        return new JwtAuthFilter(exceptionResolver);
-    }
-
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/user/welcome", "/user/create-user", "/login/autologin", "/login/refreshtoken").permitAll()
+                        .requestMatchers("/welcome", "/registerUser", "/login", "/login/refreshtoken","/verifyUser").permitAll()
                         .requestMatchers(SWAGGER_URLS).permitAll()
                         .anyRequest().authenticated()
                 )
@@ -66,7 +66,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
