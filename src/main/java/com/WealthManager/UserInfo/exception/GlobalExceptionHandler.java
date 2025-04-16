@@ -1,6 +1,5 @@
 package com.WealthManager.UserInfo.exception;
 
-import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -29,22 +28,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ProblemDetail handlesSecurityException(Exception ex, HttpServletRequest request){
         ProblemDetail errorDetail=null;
-        if(ex instanceof BadCredentialsException){
-            errorDetail=ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(401), ex.getMessage());
-            errorDetail.setProperty("access_denied_reason","Authentication Failure");
+        if (ex instanceof BadCredentialsException) {
+            errorDetail = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(401), ex.getMessage());
+            errorDetail.setProperty("access_denied_reason", "Authentication Failure");
+        } else if (ex instanceof AccessDeniedException) {
+            errorDetail = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(403), ex.getMessage());
+            errorDetail.setProperty("access_denied_reason", "Not authorized");
+        } else if (ex instanceof SignatureException) {
+            errorDetail = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(403), ex.getMessage());
+            errorDetail.setProperty("access_denied_reason", "JWT Signature is not valid.");
+        } else {
+            // ⚠️ Default for any other unhandled exception
+            errorDetail = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(500), ex.getMessage());
+            errorDetail.setProperty("error_type", ex.getClass().getSimpleName());
         }
-        if(ex instanceof AccessDeniedException){
-            errorDetail=ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(403), ex.getMessage());
-            errorDetail.setProperty("acess_denied_reason","Not_authorized");
-        }
-        if(ex instanceof SignatureException){
-            errorDetail=ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(403), ex.getMessage());
-            errorDetail.setProperty("acess_denied_reason","JWT Signature is not valid.");
-        }
-        if(ex instanceof ExpiredJwtException){
-            errorDetail=ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(403), ex.getMessage());
-            errorDetail.setProperty("acess_denied_reason","JWT Token already expired.");
-        }
+//        if(ex instanceof ExpiredJwtException){
+//            errorDetail=ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(403), ex.getMessage());
+//            errorDetail.setProperty("acess_denied_reason","JWT Token already expired.");
+//        }
+
 
         return errorDetail;
     }
@@ -101,7 +103,7 @@ public class GlobalExceptionHandler {
 //    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
 //        ErrorResponse errorResponse = new ErrorResponse();
 //        errorResponse.setMessage("An unexpected error occurred");
-//        errorResponse.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
+//        errorResponse.setCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
 //        return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
 //    }
 

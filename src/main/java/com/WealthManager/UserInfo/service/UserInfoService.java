@@ -1,21 +1,21 @@
 package com.WealthManager.UserInfo.service;
 
 
-
+import com.WealthManager.UserInfo.data.dao.UserInfo;
 import com.WealthManager.UserInfo.data.dto.*;
 import com.WealthManager.UserInfo.data.model.JwtResponse;
 import com.WealthManager.UserInfo.data.model.SuccessResponse;
 
-import java.time.Instant;
-
 public interface UserInfoService {
-    SuccessResponse registerUser(UserRegistrationDTO  userDTO);
+    SuccessResponse registerUser(UserRegistrationDTO userDTO);
 
-    SuccessResponse verifyUser(String email,String registrationToken);
+    SuccessResponse verifyUser(String email, String registrationToken);
 
     JwtResponse login(LoginDTO loginDTO);
 
     JwtResponse getAccessTokenByRefreshToken(RefreshTokenRequest refreshTokenRequest);
+
+    JwtResponse handleGoogleCallback(String code);
 
     SuccessResponse getUserById(String userId);
 
@@ -36,12 +36,13 @@ public interface UserInfoService {
 
     boolean isUserExist(String email);
 
-    SuccessResponse changePassword(String email,ChangePasswordDTO changePasswordDTO);
+    SuccessResponse changePassword(String email, ChangePasswordDTO changePasswordDTO);
 
     SuccessResponse forgotPassword(String email);
 
     SuccessResponse updatePasswordByOtp(UpdatePasswordDTO updatePasswordDTO);
 
+    UserInfo findByEmail(String email);
 
 
 }

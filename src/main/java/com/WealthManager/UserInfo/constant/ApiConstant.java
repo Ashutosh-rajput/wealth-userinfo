@@ -9,7 +9,7 @@ public class ApiConstant {
     public static final String GET_USER = "/getUser";
     public static final String GET_ALL_USERS = "/getAllUsers/{page}/{size}";
     public static final String GET_USER_BY_ID = "/getUser/{userId}";
-    public static final String GET_USER_BY_EMAIL = "/getUser/{email}";
+    public static final String GET_USER_BY_EMAIL = "/getUser";
     //Put
     public static final String UPDATE_USER_BY_ID = "/updateUser/{userId}";
     public static final String ADD_ADDRESS="/addPatientAddress/{patientId}";
@@ -24,6 +24,8 @@ public class ApiConstant {
     //Login
     public static final String LOGIN = "/login";
     public static final String REFRESH_TOKEN = "/login/refreshtoken";
+    public static final String GOOGLE_CALLBACK = "/auth/google";
+
 
 
 }

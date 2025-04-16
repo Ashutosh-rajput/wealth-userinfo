@@ -1,5 +1,6 @@
 package com.WealthManager.UserInfo.data.model;
 
+import com.WealthManager.UserInfo.data.enums.Gender;
 import com.WealthManager.UserInfo.data.enums.Role;
 import lombok.*;
 
@@ -8,11 +9,22 @@ import lombok.*;
 @NoArgsConstructor
 @Setter
 @Getter
-@ToString
 @Builder
 public class JwtResponse {
     private String accessToken;
     private String refreshToken;
-    private String email;
-    private Role role;
+    private UserResponse user;
+
+
+
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class UserResponse {
+        private String userId;
+        private String name;
+        private String email;
+        private Role role;
+        private Gender gender;
+    }
 }

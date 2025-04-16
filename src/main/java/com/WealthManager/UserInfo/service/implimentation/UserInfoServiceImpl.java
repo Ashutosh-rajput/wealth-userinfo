@@ -14,6 +14,7 @@ import com.WealthManager.UserInfo.data.model.UserEmailModel;
 import com.WealthManager.UserInfo.data.model.UserProfileModel;
 import com.WealthManager.UserInfo.exception.*;
 import com.WealthManager.UserInfo.repo.UserInfoRepo;
+import com.WealthManager.UserInfo.security.AuthUser;
 import com.WealthManager.UserInfo.security.Interface.RefreshTokenRepo;
 import com.WealthManager.UserInfo.security.JwtService;
 import com.WealthManager.UserInfo.service.UserInfoService;
@@ -22,16 +23,21 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.attachment.softnerve.service.KafkaService;
-import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -53,8 +59,15 @@ public class UserInfoServiceImpl implements UserInfoService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
+    private final RestTemplate restTemplate;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @Value("${spring.security.oauth2.client.registration.google.client-id}")
+    private String clientId;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-secret}")
+    private String clientSecret;
 
 
     @Override
@@ -114,15 +127,18 @@ public class UserInfoServiceImpl implements UserInfoService {
 
     @Override
     public JwtResponse login(LoginDTO loginDTO) {
+        log.info("Check point 1");
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginDTO.getEmail(), loginDTO.getPassword()));
 
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        log.info("Authenticated user: {}", authentication.getPrincipal());
         if (authentication.isAuthenticated()) {
-            // Get UserDetails from authentication
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            AuthUser authUser = (AuthUser) authentication.getPrincipal();
+            UserInfo user = authUser.getUserInfo();
 
             // Extract role from granted authorities
-            String roleName = userDetails.getAuthorities().stream()
+            String roleName = authUser.getAuthorities().stream()
                     .findFirst()
                     .map(GrantedAuthority::getAuthority)
                     .orElseThrow(() -> new IllegalStateException("No authority found for user"));
@@ -130,12 +146,15 @@ public class UserInfoServiceImpl implements UserInfoService {
             Role role = Role.valueOf(roleName); // Convert back to enum
 
             RefreshToken refreshToken = this.createRefreshToken(loginDTO.getEmail());
-            log.info("Login successfully with email: {} Role: {}", loginDTO.getEmail(), role);
+
+            log.info("Token requested for user :{}", authentication.getAuthorities());
+
+
+            log.info("Login successfully with email: {} Role: {} RefreshToken: {}", loginDTO.getEmail(), role, refreshToken);
             return JwtResponse.builder()
-                    .accessToken(jwtService.generateToken(loginDTO.getEmail(), role))
+                    .accessToken(jwtService.generateToken(authentication))
                     .refreshToken(refreshToken.getToken())
-                    .email(loginDTO.getEmail())
-                    .role(role) // Include role in response if needed
+                    .user(new JwtResponse.UserResponse(user.getUserId(),user.getName(),user.getEmail(),user.getRole(),user.getGender()))
                     .build();
         } else {
             throw new UsernameNotFoundException("invalid User Request");
@@ -156,15 +175,77 @@ public class UserInfoServiceImpl implements UserInfoService {
                             .map(GrantedAuthority::getAuthority)
                             .orElseThrow(() -> new IllegalStateException("No authority found for user"));
 
-                    String accessToken = jwtService.generateToken(email, Role.valueOf(roleName));
+                    String accessToken = "jwtService.generateToken(email, Role.valueOf(roleName));";
                     return JwtResponse.builder()
                             .accessToken(accessToken)
                             .refreshToken(refreshTokenRequest.getRefreshToken())
-                            .email(refreshToken.getEmail())
                             .build();
                 }).orElseThrow(() -> new RefreshTokenNotFoundException(
                         "Refresh token is not in database"));
     }
+
+    @Override
+    public JwtResponse handleGoogleCallback(String code) {
+        try {
+            String tokenEndpoint = "https://oauth2.googleapis.com/token";
+            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+            params.add("code", code);
+            params.add("client_id", clientId);
+            params.add("client_secret", clientSecret);
+            params.add("redirect_uri", "https://developers.google.com/oauthplayground");
+            params.add("grant_type", "authorization_code");
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+            ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(tokenEndpoint, request, Map.class);
+            String idToken = (String) tokenResponse.getBody().get("id_token");
+
+            String userInfoUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken;
+            ResponseEntity<Map> userInfoResponse = restTemplate.getForEntity(userInfoUrl, Map.class);
+
+            if (userInfoResponse.getStatusCode() == HttpStatus.OK) {
+                Map<String, Object> userInfo = userInfoResponse.getBody();
+                String email = (String) userInfo.get("email");
+
+                UserDetails userDetails;
+                UserInfo user;
+
+                try {
+                    userDetails = userDetailsService.loadUserByUsername(email);
+                    user = ((AuthUser) userDetails).getUserInfo();
+                } catch (Exception e) {
+                    user = new UserInfo();
+                    user.setEmail(email);
+                    user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+                    user.setRole(Role.ROLE_USER);
+                    user = userInfoRepo.save(user); // Save and reassign to get ID
+                    userDetails = new AuthUser(user);
+                }
+
+                Authentication authentication = new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities()
+                );
+
+                String jwtToken = jwtService.generateToken(authentication);
+                RefreshToken refreshToken = this.createRefreshToken(email);
+
+                return JwtResponse.builder()
+                        .accessToken(jwtToken)
+                        .refreshToken(refreshToken.getToken())
+                        .user(new JwtResponse.UserResponse(user.getUserId(),user.getName(),user.getEmail(),user.getRole(),user.getGender()))
+                        .build();
+            }
+
+            throw new BadRequestException("Invalid Google token");
+
+        } catch (Exception e) {
+            log.error("Exception occurred while handleGoogleCallback ", e);
+            throw new RuntimeException("Google sign-in failed");
+        }
+    }
+
 
 
     @Override
@@ -435,6 +516,16 @@ public class UserInfoServiceImpl implements UserInfoService {
     }
 
     @Override
+    public UserInfo findByEmail(String email) {
+        UserInfo userInfo = getUserInfoFromCacheOrDBByIdOrEmail(email.toLowerCase(), "getUserByEmail");
+        if (!userInfo.isVerified()) {
+            throw new UserNotVerifiedException("Please verify your email.");
+        }
+        log.info("Find user by email for login: {}", email);
+        return userInfo;
+    }
+
+    @Override
     public SuccessResponse getUserByPhoneNumber(String phoneNumber) {
         return null;
     }
@@ -511,7 +602,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     //-------------------------Security----------------------------------------------------------------
     private RefreshToken createRefreshToken(String email) {
         UserInfo userInfo = getUserInfoFromCacheOrDBByIdOrEmail(email, "createRefreshToken");
-        Optional<RefreshToken> existingTokenOpt = refreshTokenRepo.findByUserid(userInfo.getUserId());
+        Optional<RefreshToken> existingTokenOpt = refreshTokenRepo.findByEmail(userInfo.getEmail());
         RefreshToken refreshToken;
         if (existingTokenOpt.isPresent()) {
             refreshToken = existingTokenOpt.get();

@@ -37,7 +37,7 @@ RUN mvn clean package -DskipTests
 
 # Stage 2: Runtime
 FROM gcr.io/distroless/java21-debian12 AS final
-LABEL key="patient"
+LABEL key="userinfo"
 
 # Copy the built JAR from the build stage to the runtime stage
 COPY --from=build /app/target/UserInfo.jar /app/UserInfo.jar
