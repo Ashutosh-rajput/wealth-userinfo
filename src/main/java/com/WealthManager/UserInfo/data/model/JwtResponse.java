@@ -16,7 +16,8 @@ public class JwtResponse {
     private UserResponse user;
 
 
-
+    @Getter
+    @Setter
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder

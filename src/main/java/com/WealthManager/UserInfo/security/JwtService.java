@@ -1,5 +1,6 @@
 package com.WealthManager.UserInfo.security;
 
+import com.WealthManager.UserInfo.data.dao.UserInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -26,16 +27,17 @@ public class JwtService {
     public String generateToken(Authentication authentication) {
         Instant now = Instant.now();
 
-        String scope = authentication.getAuthorities()
-                .stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.joining(" "));
+        String scope = authentication.getAuthorities().toString();
+
+        AuthUser authUser = (AuthUser) authentication.getPrincipal();
+        UserInfo user = authUser.getUserInfo();
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer("self")
                 .issuedAt(now)
                 .expiresAt(now.plus(10, ChronoUnit.HOURS))
                 .subject(authentication.getName())
+                .id(user.getUserId())
                 .claim("scope", scope)
                 .build();
 
