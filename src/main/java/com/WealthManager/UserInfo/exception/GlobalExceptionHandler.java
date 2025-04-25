@@ -1,9 +1,13 @@
 package com.WealthManager.UserInfo.exception;
 
+import com.nimbusds.jwt.proc.BadJWTException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.oauth2.jwt.JwtException;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -44,11 +48,17 @@ public class GlobalExceptionHandler {
         } else if (ex instanceof SignatureException) {
             status = HttpStatus.FORBIDDEN;
             message = "Invalid JWT Signature: " + ex.getMessage();
+        } else if (ex instanceof BadJWTException) {
+            status = HttpStatus.UNAUTHORIZED;
+            message = "Invalid or Expired JWT: " + ex.getMessage();
+        } else if (ex instanceof JwtValidationException) {
+            status = HttpStatus.UNAUTHORIZED;
+            message = "Expired JWT: " + ex.getMessage();
+        } else if (ex instanceof JwtException) {
+            status = HttpStatus.UNAUTHORIZED;
+            message = "Invalid or Expired JWT: " + ex.getMessage();
         }
-//        else if (ex instanceof ExpiredJwtException) {
-//            status = HttpStatus.FORBIDDEN;
-//            message = "JWT Token Expired: " + ex.getMessage();
-//        }
+
         else {
             status = HttpStatus.INTERNAL_SERVER_ERROR;
             message = ex.getMessage() != null ? ex.getMessage() : "Unexpected error occurred";

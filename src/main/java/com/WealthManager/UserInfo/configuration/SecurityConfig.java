@@ -63,9 +63,9 @@ public class SecurityConfig {
                 .csrf(csrf -> {
                     csrf.disable();
                 })
-                .cors(cors -> cors.disable())
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/welcome", "/registerUser", "/login", "/login/refreshtoken","/verifyUser").permitAll()
+                        .requestMatchers("/welcome", "/registerUser", "/login", "/login/refreshtoken","/verifyUser","/forgotPassword/**","resetPassword").permitAll()
                         .requestMatchers(SWAGGER_URLS).permitAll()
                         .anyRequest().authenticated()
                 )

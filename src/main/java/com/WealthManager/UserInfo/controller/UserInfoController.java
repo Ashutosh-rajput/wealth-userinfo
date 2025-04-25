@@ -71,6 +71,13 @@ public class UserInfoController {
         return new ResponseEntity<>(userInfoService.getUserById(userId), HttpStatus.OK);
     }
 
+    @Operation(summary = "Get user", description = "Retrieves user details from security context.")
+    @SecurityRequirement(name = "BearerAuth")
+    @GetMapping(ApiConstant.GET_USER)
+    public ResponseEntity<SuccessResponse> getUser() {
+        return new ResponseEntity<>(userInfoService.getUser(), HttpStatus.OK);
+    }
+
     @Operation(summary = "Get user by Email", description = "Retrieves user details by email")
     @SecurityRequirement(name = "BearerAuth")
     @GetMapping(ApiConstant.GET_USER_BY_EMAIL)

@@ -23,7 +23,7 @@ public class UserEmailModel implements Serializable {
     private String phoneNumber;
     private String otp;
     private String registrationToken;
-    private String contactUsUrl="https://wealthmanager/support.com";
+    private String contactUsUrl="https://WealthArc/support.com";
 
 
 }

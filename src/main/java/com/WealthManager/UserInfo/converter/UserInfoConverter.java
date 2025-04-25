@@ -46,6 +46,7 @@ public class UserInfoConverter {
                 .email(userInfo.getEmail())
                 .phoneNumber(userInfo.getPhoneNumber())
                 .registrationToken(userInfo.getRegistrationToken())
+                .contactUsUrl("https://WealthArc/support.com")
                 .build();
     }
 

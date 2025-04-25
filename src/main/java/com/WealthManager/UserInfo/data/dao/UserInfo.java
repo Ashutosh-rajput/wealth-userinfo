@@ -33,7 +33,6 @@ public class UserInfo {
 
     @Id
     @Field("_id")
-    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Indexed(unique = true)
     private String userId;
     @NotBlank

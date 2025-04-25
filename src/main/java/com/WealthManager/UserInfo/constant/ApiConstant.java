@@ -6,9 +6,9 @@ public class ApiConstant {
     public static final String SAVE_USER = "/registerUser";
     public static final String VERIFY_USER = "/verifyUser";
     //Get
-    public static final String GET_USER = "/getUser";
     public static final String GET_ALL_USERS = "/getAllUsers/{page}/{size}";
     public static final String GET_USER_BY_ID = "/getUser/{userId}";
+    public static final String GET_USER = "/user/getUser";
     public static final String GET_USER_BY_EMAIL = "/getUser";
     //Put
     public static final String UPDATE_USER_BY_ID = "/updateUser/{userId}";

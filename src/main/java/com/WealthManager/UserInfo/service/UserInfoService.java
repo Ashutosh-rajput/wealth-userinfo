@@ -19,6 +19,8 @@ public interface UserInfoService {
 
     SuccessResponse getUserById(String userId);
 
+    SuccessResponse getUser();
+
     SuccessResponse getUserByName(String username);
 
     SuccessResponse getUserByPhoneNumber(String phoneNumber);

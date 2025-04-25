@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.attachment.softnerve.service.KafkaService;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.security.oauth2.resource.OAuth2ResourceServerProperties;
 import org.springframework.http.*;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -34,9 +35,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
@@ -85,6 +88,8 @@ public class UserInfoServiceImpl implements UserInfoService {
         userInfo.setVerified(false);
         userInfo.setRole(Role.ROLE_USER);
         userInfo.setUserId(counterService.getNextUserInfoId());
+        userInfo.setCreatedAt(new Date());
+        userInfo.setUpdatedAt(new Date());
         userInfoRepo.save(userInfo);
         log.info("Data storing in Mongo took {} ms", (System.currentTimeMillis() - startTime));
         log.info("Publishing Kafka event to send verification email for user with ID: {}", userInfo.getUserId());
@@ -260,6 +265,18 @@ public class UserInfoServiceImpl implements UserInfoService {
                 new SuccessResponse.ResponseData<>(Collections.singletonList(userProfileModel), null)
         );
     }
+    @Override
+    public SuccessResponse getUser() {
+        log.info("Getting user authenticated user");
+        UserInfo userInfo = getAuthenticatedUser();
+        UserProfileModel userProfileModel = UserInfoConverter.toModel(userInfo);
+        return new SuccessResponse(
+                HttpStatus.FOUND.value(),
+                "User found.",
+                ApiConstant.GET_USER,
+                new SuccessResponse.ResponseData<>(Collections.singletonList(userProfileModel), null)
+        );
+    }
 
     @Override
     public SuccessResponse getAllUsers(int page, int size) {
@@ -371,22 +388,26 @@ public class UserInfoServiceImpl implements UserInfoService {
             throw new UserNotFoundException("User not found with id: " + userId);
         }
 
-        // Update user information
-        if (userUpdateDTO.getName() != null) {
+        // Update name only if it's not null or blank
+        if (StringUtils.hasText(userUpdateDTO.getName())) {
             userInfo.setName(userUpdateDTO.getName());
         }
-        if (userUpdateDTO.getPhoneNumber() != null) {
-            // Check if phone number already exists for another user
-            if (!userInfo.getPhoneNumber().equals(userUpdateDTO.getPhoneNumber()) &&
-                    userInfoRepo.existsByPhoneNumber(userUpdateDTO.getPhoneNumber())) {
+
+        // Update phoneNumber only if it's not null or blank
+        if (StringUtils.hasText(userUpdateDTO.getPhoneNumber())) {
+            String newPhone = userUpdateDTO.getPhoneNumber();
+            // Check if it's different and doesn't already exist
+            if (!newPhone.equals(userInfo.getPhoneNumber()) && userInfoRepo.existsByPhoneNumber(newPhone)) {
                 throw new PhoneNumberAlreadyExists("Phone number already exists. Please use another phone number.");
             }
-            userInfo.setPhoneNumber(userUpdateDTO.getPhoneNumber());
+            userInfo.setPhoneNumber(newPhone);
         }
-        if (userUpdateDTO.getDob() != null) {
+
+        if (StringUtils.hasText(userUpdateDTO.getDob())) {
             userInfo.setDob(userUpdateDTO.getDob());
             userInfo.setAge(calculateAge(userInfo.getDob()));
         }
+
         if (userUpdateDTO.getGender() != null) {
             userInfo.setGender(userUpdateDTO.getGender());
         }
@@ -548,7 +569,7 @@ public class UserInfoServiceImpl implements UserInfoService {
             String userIdPattern = "^USER\\d{10}$";
             if (userIdOrEmail.matches(userIdPattern)) {
                 UserInfo userInfo = userInfoRepo.findById(userIdOrEmail)
-                        .orElseThrow(() -> new UserNotFoundException("User with email " + userIdOrEmail + " not found"));
+                        .orElseThrow(() -> new UserNotFoundException("User with Id " + userIdOrEmail + " not found"));
                 cacheService.addEntry("USER_INFO", userInfo.getUserId(), userInfo);
                 return userInfo;
 
@@ -595,7 +616,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     // Generates a random 4-digit OTP.
     private String generateOTP() {
         Random rand = new Random();
-        return String.format("%04d", rand.nextInt(10000));
+        return String.format("%06d", rand.nextInt(1000000));
     }
 
 
@@ -630,6 +651,14 @@ public class UserInfoServiceImpl implements UserInfoService {
 
         }
         return refreshToken;
+    }
+
+
+    private UserInfo getAuthenticatedUser() {
+        Jwt jwt = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = jwt.getId(); // or your actual claim name
+
+      return getUserInfoFromCacheOrDBByIdOrEmail(userId, "getAuthenticatedUser");
     }
 
 
