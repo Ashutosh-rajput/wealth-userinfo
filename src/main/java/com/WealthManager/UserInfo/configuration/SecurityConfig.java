@@ -65,7 +65,7 @@ public class SecurityConfig {
                 })
                 .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/welcome", "/registerUser", "/login", "/login/refreshtoken","/verifyUser","/forgotPassword/**","resetPassword").permitAll()
+                        .requestMatchers("/welcome", "/registerUser", "/login", "/login/refreshtoken","/verifyUser","/forgotPassword/**","/resetPassword","/auth/google").permitAll()
                         .requestMatchers(SWAGGER_URLS).permitAll()
                         .anyRequest().authenticated()
                 )

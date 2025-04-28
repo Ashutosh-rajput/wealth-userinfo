@@ -72,6 +72,9 @@ public class UserInfoServiceImpl implements UserInfoService {
     @Value("${spring.security.oauth2.client.registration.google.client-secret}")
     private String clientSecret;
 
+    @Value("${spring.security.oauth2.client.registration.google.redirect-uri}")
+    private String redirectUri;
+
 
     @Override
     public SuccessResponse registerUser(UserRegistrationDTO userDTO) {
@@ -159,7 +162,7 @@ public class UserInfoServiceImpl implements UserInfoService {
             return JwtResponse.builder()
                     .accessToken(jwtService.generateToken(authentication))
                     .refreshToken(refreshToken.getToken())
-                    .user(new JwtResponse.UserResponse(user.getUserId(),user.getName(),user.getEmail(),user.getRole(),user.getGender()))
+                    .user(new JwtResponse.UserResponse(user.getUserId(), user.getName(), user.getEmail(), user.getRole(), user.getGender()))
                     .build();
         } else {
             throw new UsernameNotFoundException("invalid User Request");
@@ -197,22 +200,23 @@ public class UserInfoServiceImpl implements UserInfoService {
             params.add("code", code);
             params.add("client_id", clientId);
             params.add("client_secret", clientSecret);
-            params.add("redirect_uri", "https://developers.google.com/oauthplayground");
+            params.add("redirect_uri", "http://localhost:3000/auth/google/callback");
             params.add("grant_type", "authorization_code");
-
+            log.info("Sending token endpoint: {}", tokenEndpoint);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
             ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(tokenEndpoint, request, Map.class);
             String idToken = (String) tokenResponse.getBody().get("id_token");
-
+            log.info("Refresh token: {}", idToken);
             String userInfoUrl = "https://oauth2.googleapis.com/tokeninfo?id_token=" + idToken;
             ResponseEntity<Map> userInfoResponse = restTemplate.getForEntity(userInfoUrl, Map.class);
-
+            log.info("User info response: {}", userInfoResponse.getBody());
             if (userInfoResponse.getStatusCode() == HttpStatus.OK) {
                 Map<String, Object> userInfo = userInfoResponse.getBody();
                 String email = (String) userInfo.get("email");
+                String name = (String) userInfo.get("name");
 
                 UserDetails userDetails;
                 UserInfo user;
@@ -220,9 +224,15 @@ public class UserInfoServiceImpl implements UserInfoService {
                 try {
                     userDetails = userDetailsService.loadUserByUsername(email);
                     user = ((AuthUser) userDetails).getUserInfo();
+                    log.info("Google login: {}", email);
+
                 } catch (Exception e) {
+                    this.checkEmailExists(email);
                     user = new UserInfo();
+                    user.setUserId(counterService.getNextUserInfoId());
+                    user.setName(name);
                     user.setEmail(email);
+                    user.setVerified(true);
                     user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
                     user.setRole(Role.ROLE_USER);
                     user = userInfoRepo.save(user); // Save and reassign to get ID
@@ -239,7 +249,7 @@ public class UserInfoServiceImpl implements UserInfoService {
                 return JwtResponse.builder()
                         .accessToken(jwtToken)
                         .refreshToken(refreshToken.getToken())
-                        .user(new JwtResponse.UserResponse(user.getUserId(),user.getName(),user.getEmail(),user.getRole(),user.getGender()))
+                        .user(new JwtResponse.UserResponse(user.getUserId(), user.getName(), user.getEmail(), user.getRole(), user.getGender()))
                         .build();
             }
 
@@ -250,7 +260,6 @@ public class UserInfoServiceImpl implements UserInfoService {
             throw new RuntimeException("Google sign-in failed");
         }
     }
-
 
 
     @Override
@@ -265,6 +274,7 @@ public class UserInfoServiceImpl implements UserInfoService {
                 new SuccessResponse.ResponseData<>(Collections.singletonList(userProfileModel), null)
         );
     }
+
     @Override
     public SuccessResponse getUser() {
         log.info("Getting user authenticated user");
@@ -601,6 +611,13 @@ public class UserInfoServiceImpl implements UserInfoService {
         }
     }
 
+    private void checkEmailExists(String email) {
+        if (userInfoRepo.existsByEmail(email)) {
+//            kafkaService.publishToKafkaAsync("SendAlreadyRegisteredEmail", userRegistrationDTO.getUserId(), userRegistrationDTO.toString());
+            throw new EmailAlreadyExists("Email already exists. Please use another email.");
+        }
+    }
+
     private int calculateAge(String dob) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         LocalDate birthDate = LocalDate.parse(dob, formatter);
@@ -658,7 +675,7 @@ public class UserInfoServiceImpl implements UserInfoService {
         Jwt jwt = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String userId = jwt.getId(); // or your actual claim name
 
-      return getUserInfoFromCacheOrDBByIdOrEmail(userId, "getAuthenticatedUser");
+        return getUserInfoFromCacheOrDBByIdOrEmail(userId, "getAuthenticatedUser");
     }
 
 

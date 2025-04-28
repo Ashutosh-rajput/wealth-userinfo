@@ -42,8 +42,8 @@ public class UserInfoController {
 
     @Operation(summary = "Google Callback", description = "Logs in the user and returns JWT access and refresh tokens by google authorization token")
     @PostMapping(ApiConstant.GOOGLE_CALLBACK)
-    public ResponseEntity<JwtResponse> GoogleCallBack(@RequestParam String token) {
-        return ResponseEntity.ok(userInfoService.handleGoogleCallback(token));
+    public ResponseEntity<JwtResponse> GoogleCallBack(@RequestParam String code) {
+        return ResponseEntity.ok(userInfoService.handleGoogleCallback(code));
     }
 
     @Operation(summary = "Refresh JWT token", description = "Generates a new access token using the refresh token")
