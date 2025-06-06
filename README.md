@@ -1,8 +1,10 @@
-# Wealth Manager: Your Intelligent Financial Command Center 💰📊
+<h1 style="display: flex; gap: 20px;">
+  <img src="https://i.postimg.cc/Vk6NxD9p/Wealth-Arcbig.png" alt="WealthArc Logo" width="200" style="align-self: flex-start; margin-top: 35px;"/>
+  <span style="align-self: center;">Your Intelligent Financial Command Center 💰📊</span>
+</h1>
 
 ## 📖 Table of Contents
 
-*   [Executive Summary](#executive-summary)
 *   [ justifications for Technology Choices](#justifications-for-technology-choices)
 *   [🌟 Introduction](#introduction)
 *   [🚀 Key Features and Functionality](#key-features-and-functionality)
@@ -33,9 +35,15 @@
 *   [💡 Future Scope and Roadmap](#future-scope-and-roadmap)
 
 
-## Executive Summary
+# WealthArc: Scalable Microservices-Based Personal Finance Platform
 
-This report details the development of "Wealth Manager," a cutting-edge personal finance application designed to empower users to effectively manage their income, expenses, budgets, and subscriptions. Built on a scalable and resilient microservices architecture deployed on Google Cloud Platform (GCP), Wealth Manager leverages the power of Artificial Intelligence (AI) and a secure JWT-based authentication system to provide an intuitive, automated, and insightful financial management experience. Key features include intelligent expense and earning tracking, dynamic budgeting tools, subscription management, and an AI-powered DocAI Processor for automated document-based data entry. The application prioritizes user security and data privacy while providing a holistic view of personal finances and actionable insights. Utilizing a modern tech stack encompassing Spring Boot, ReactJS, Flutter (future), Kafka, Redis, Docker, Kubernetes, Jenkins, and advanced AI models, Wealth Manager is poised to revolutionize personal finance management for its users.
+This report details the development of **WealthArc**, a modern personal finance application designed to help users efficiently manage their income, expenses, budgets, and subscriptions.
+
+Built using a **scalable, resilient microservices architecture** deployed on **Google Cloud Platform (GCP)**, WealthArc focuses on delivering a secure, intuitive, and insightful financial management experience.
+
+WealthArc places high priority on **data privacy**, **security**, and **user experience**, offering a complete view of one’s financial life while minimizing complexity and maximizing control.
+
+
 
 ---
 
